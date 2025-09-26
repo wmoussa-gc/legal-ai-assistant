@@ -2,8 +2,6 @@
 
 > *A ChatGPT-like interface for legal queries with **guaranteed accuracy** through formal verification using s(CASP) logic programming.*
 
-![Legal AI Assistant Demo](https://img.shields.io/badge/Status-Production%20Ready-brightgreen) ![Version](https://img.shields.io/badge/Version-1.0.0-blue) ![License](https://img.shields.io/badge/License-MIT-green)
-
 ## 🎯 **Core Value Proposition**
 
 Unlike traditional AI chatbots that can "hallucinate" or provide incorrect legal advice, this system **formally verifies every answer** against structured legal rules, providing:
@@ -57,7 +55,7 @@ s(CASP) Rule: access_right(Person, Record) :- canadian_citizen(Person), governme
 ```mermaid
 graph LR
     A[👤 User Query] --> B[🧠 LLM Service]
-    B --> C[⚖️ s(CASP) Engine] 
+    B --> C[⚖️ sCASP Engine] 
     C --> D[📚 Legal Rules]
     D --> E[✅ Formal Proof]
     E --> F[💬 Natural Language Response]
