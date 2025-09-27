@@ -95,6 +95,35 @@ const LoadingIndicator = styled.div`
   gap: 0.5rem;
   color: #64748b;
   margin: 1rem;
+  padding: 1rem;
+  background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 8px;
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+`;
+
+const ProcessingSteps = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+`;
+
+const ProcessingStep = styled.div<{ $completed: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: ${props => props.$completed ? '#059669' : '#64748b'};
+  
+  &::before {
+    content: '${props => props.$completed ? '✓' : '⏳'}';
+    font-size: 0.8rem;
+  }
 `;
 
 interface ChatInterfaceProps {
@@ -108,6 +137,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className }) => {
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = useState<LegalResponse | null>(null);
+  const [processingSteps, setProcessingSteps] = useState<{ step: string; completed: boolean }[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -167,12 +197,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className }) => {
     setIsLoading(true);
     setError(null);
 
+    // Initialize processing steps
+    const steps = [
+      { step: 'Analyzing your question...', completed: false },
+      { step: 'Searching legal documents...', completed: false },
+      { step: 'Applying formal reasoning...', completed: false },
+      { step: 'Generating response...', completed: false }
+    ];
+    setProcessingSteps(steps);
+
     try {
-      let responseText = '';
+      let stepIndex = 0;
       
       await ApiService.submitQueryStream(
         { query: queryText, context },
         (chunk) => {
+          // Simulate processing step progression
+          if (stepIndex < steps.length - 1) {
+            setProcessingSteps(prev => prev.map((step, index) => 
+              index <= stepIndex ? { ...step, completed: true } : step
+            ));
+            stepIndex++;
+          }
+
           // Update the loading message with partial response
           setMessages(prev => prev.map(msg => 
             msg.id === loadingMessage.id 
@@ -181,6 +228,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className }) => {
           ));
         },
         (response) => {
+          // Complete all processing steps
+          setProcessingSteps(prev => prev.map(step => ({ ...step, completed: true })));
+
           // Final response received
           const assistantMessage: ChatMessage = {
             id: `assistant-${Date.now()}`,
@@ -196,10 +246,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className }) => {
           ));
 
           setIsLoading(false);
+          setProcessingSteps([]);
         },
         (error) => {
           console.error('Query failed:', error);
           setError(error.message);
+          setProcessingSteps([]);
           
           const errorMessage: ChatMessage = {
             id: `error-${Date.now()}`,
@@ -313,6 +365,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ className }) => {
           </>
         )}
       </MessagesContainer>
+
+      {/* Show processing steps when actively processing */}
+      {isLoading && processingSteps.length > 0 && (
+        <LoadingIndicator>
+          <div style={{ fontWeight: 500 }}>Processing your legal query...</div>
+          <ProcessingSteps>
+            {processingSteps.map((step, index) => (
+              <ProcessingStep key={index} $completed={step.completed}>
+                {step.step}
+              </ProcessingStep>
+            ))}
+          </ProcessingSteps>
+        </LoadingIndicator>
+      )}
 
       <InputArea
         onSendMessage={handleSendMessage}

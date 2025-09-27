@@ -4,6 +4,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { ChatMessage } from '../types';
 import ApiService from '../services/api';
+import { parseResponseContent } from '../utils/responseParser';
+import LegalResponseDisplay from './LegalResponseDisplay';
 
 const BubbleContainer = styled.div<{ $isUser: boolean }>`
   display: flex;
@@ -144,19 +146,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onShowDetails })
     return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Parse the message content to handle JSON responses
+  const parsedContent = !isUser && !isSystem ? parseResponseContent(message.content) : null;
+  const displayContent = parsedContent ? parsedContent.answer : message.content;
+
   return (
     <BubbleContainer $isUser={isUser}>
       <Bubble $isUser={isUser} $isSystem={isSystem}>
         <MessageContent>
           {message.isLoading ? (
             <div>
-              {message.content}
+              {displayContent}
               <LoadingDots />
             </div>
           ) : (
-            message.content
+            displayContent
           )}
         </MessageContent>
+
+        {/* Show enhanced response details if we have parsed JSON data */}
+        {parsedContent && !message.isLoading && (
+          <LegalResponseDisplay parsedResponse={parsedContent} />
+        )}
 
         {response && !message.isLoading && (
           <>

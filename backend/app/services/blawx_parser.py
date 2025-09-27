@@ -210,7 +210,16 @@ class BlawxParser:
     
     def _parse_scasp_line(self, line: str) -> Optional[ScaspRule]:
         """Parse a single s(CASP) line."""
-        line = line.rstrip('.')
+        line = line.strip()
+        
+        # Skip empty lines, comments, or malformed lines
+        if not line or line.startswith('%') or line == '.' or line.endswith(',.'):
+            return None
+            
+        # Clean up common syntax issues
+        line = line.rstrip('.,')  # Remove trailing periods and commas
+        if not line:
+            return None
         
         # Determine rule type
         if line.startswith('#abducible'):
@@ -219,12 +228,22 @@ class BlawxParser:
         elif line.startswith('?-'):
             rule_type = 'query'
             rule_text = line[2:].strip()  # Remove '?- '
+        elif line.startswith('#pred'):
+            rule_type = 'fact'  # Predicate definitions are treated as facts
+            rule_text = line
+        elif line.startswith(':-'):
+            rule_type = 'rule'
+            rule_text = line
         elif ':-' in line:
             rule_type = 'rule'
             rule_text = line
         else:
             rule_type = 'fact'
             rule_text = line
+        
+        # Skip if rule text is empty after cleaning
+        if not rule_text:
+            return None
         
         # Extract variables (uppercase words)
         variables = re.findall(r'\b[A-Z][a-zA-Z0-9_]*\b', rule_text)
@@ -296,28 +315,41 @@ class BlawxParser:
         if facts:
             program_lines.append("% Facts")
             for rule in facts:
-                program_lines.append(f"{rule.rule_text}.")
+                # Ensure rule ends with period if it doesn't already
+                rule_text = rule.rule_text.rstrip('.')
+                if rule_text and not rule_text.endswith('.'):
+                    rule_text += '.'
+                if rule_text:  # Only add non-empty rules
+                    program_lines.append(rule_text)
             program_lines.append("")
         
         # Add abducibles
         if abducibles:
             program_lines.append("% Abducibles")
             for rule in abducibles:
-                program_lines.append(f"#abducible {rule.rule_text}.")
+                rule_text = rule.rule_text.rstrip('.')
+                if rule_text:
+                    program_lines.append(f"#abducible {rule_text}.")
             program_lines.append("")
         
         # Add rules
         if logic_rules:
             program_lines.append("% Rules")
             for rule in logic_rules:
-                program_lines.append(f"{rule.rule_text}.")
+                rule_text = rule.rule_text.rstrip('.')
+                if rule_text and not rule_text.endswith('.'):
+                    rule_text += '.'
+                if rule_text:  # Only add non-empty rules
+                    program_lines.append(rule_text)
             program_lines.append("")
         
         # Add queries
         if queries:
             program_lines.append("% Queries")
             for rule in queries:
-                program_lines.append(f"?- {rule.rule_text}.")
+                rule_text = rule.rule_text.rstrip('.')
+                if rule_text:
+                    program_lines.append(f"?- {rule_text}.")
         
         return '\n'.join(program_lines)
 
