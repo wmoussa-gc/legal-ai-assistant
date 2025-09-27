@@ -92,7 +92,7 @@ class ScaspEngine:
         return self.scasp_path is not None or self.prolog_path is not None
     
     def query(self, program: str, query: str, timeout: int = 30) -> ScaspResult:
-        """Execute a query against an s(CASP) program with fallback strategies."""
+        """Execute a query against an s(CASP) program with SWI-Prolog fallback only."""
         if not self.is_available():
             return ScaspResult(
                 query=query,
@@ -106,8 +106,9 @@ class ScaspEngine:
         try:
             start_time = time.time()
             
-            # First attempt: Try with full program
+            # First attempt: Try with full program using s(CASP)
             if self.scasp_path:
+                print(f"Attempting query with full program: {query}")
                 result = self._query_scasp(program, query, timeout)
                 
                 # If s(CASP) fails due to complex predicates, try simplified version
@@ -117,10 +118,12 @@ class ScaspEngine:
                         print(f"s(CASP) failed with complex rules, trying simplified version...")
                         result = self._query_scasp(simplified_program, query, timeout)
                 
-                # If still failing, try mock response based on query patterns
-                if not result.get('success', False):
-                    result = self._create_fallback_response(query, program)
+                # If s(CASP) still fails, try SWI-Prolog as fallback
+                if not result.get('success', False) and self.prolog_path:
+                    print("s(CASP) failed, trying SWI-Prolog...")
+                    result = self._query_prolog(simplified_program, query, timeout)
             else:
+                # Only Prolog available
                 result = self._query_prolog(program, query, timeout)
             
             execution_time = time.time() - start_time
@@ -131,7 +134,7 @@ class ScaspEngine:
                 program_used=program,
                 execution_time=execution_time,
                 success=result.get('success', False),
-                error_message=result.get('error')
+                error_message=result.get('error', 'Both s(CASP) and SWI-Prolog reasoning failed')
             )
             
         except Exception as e:
@@ -194,50 +197,9 @@ eligible_for_access(Person) :-
         
         return simplified_program
     
-    def _create_fallback_response(self, query: str, program: str) -> Dict[str, Any]:
-        """Create a reasonable fallback response when s(CASP) fails."""
-        
-        # Analyze the query to provide intelligent responses
-        query_lower = query.lower()
-        
-        # Health Canada related queries
-        if any(term in query_lower for term in ['health_canada', 'health', 'canada']):
-            if 'canadian_citizen' in query_lower or 'citizen' in query_lower:
-                return {
-                    'success': True,
-                    'answers': [ScaspAnswer(
-                        solution={'Person': 'canadian_citizen'},
-                        justification=[
-                            'Under the Access to Information Act, Canadian citizens have the right to request records from federal government institutions.',
-                            'Health Canada is a federal government institution.',
-                            'Therefore, Canadian citizens can request records from Health Canada, subject to certain exemptions.'
-                        ],
-                        confidence=0.8,
-                        is_consistent=True
-                    )]
-                }
-        
-        # General access to information queries
-        if any(term in query_lower for term in ['request', 'access', 'record', 'information']):
-            return {
-                'success': True,
-                'answers': [ScaspAnswer(
-                    solution={},
-                    justification=[
-                        'Based on general Canadian access to information principles.',
-                        'Citizens generally have rights to request government records.',
-                        'Specific exemptions and procedures may apply.'
-                    ],
-                    confidence=0.6,
-                    is_consistent=True
-                )]
-            }
-        
-        # Default fallback
-        return {
-            'success': False,
-            'error': 'Unable to process complex legal query with available reasoning engine'
-        }
+
+    
+
     
     def _query_scasp(self, program: str, query: str, timeout: int) -> Dict[str, Any]:
         """Execute query using s(CASP)."""

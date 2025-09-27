@@ -28,6 +28,96 @@ This document describes the integration of the s(CASP) (stochastic Constraint An
    - Coordinates between natural language queries and formal logic
    - Manages the complete legal reasoning pipeline
 
+## SWI-Prolog Integration
+
+### Overview
+SWI-Prolog serves as a critical fallback mechanism when s(CASP) is unavailable or fails to compile complex legal rules. It provides basic logic programming capabilities to ensure the system remains functional.
+
+### Architecture Role
+```
+Primary: s(CASP) Engine (advanced reasoning)
+    ↓ (if unavailable or fails)
+Fallback: SWI-Prolog Engine (basic logic)
+```
+
+### SWI-Prolog Detection and Setup
+The system automatically detects SWI-Prolog installations:
+
+```python
+def _find_prolog(self) -> Optional[str]:
+    """Try to find SWI-Prolog installation."""
+    possible_paths = [
+        '/usr/local/bin/swipl',     # Homebrew on macOS
+        '/usr/bin/swipl',           # Linux package managers
+        'swipl'                     # In PATH
+    ]
+    
+    for path in possible_paths:
+        try:
+            result = subprocess.run([path, '--version'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return path
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            continue
+```
+
+### Query Execution with SWI-Prolog
+When s(CASP) is unavailable, the system uses SWI-Prolog:
+
+```python
+def _query_prolog(self, program: str, query: str, timeout: int) -> Dict[str, Any]:
+    """Execute query using SWI-Prolog as fallback."""
+    
+    # Create temporary program file
+    program_file = self.temp_dir / f"program_{os.getpid()}.pl"
+    with open(program_file, 'w') as f:
+        f.write(program)
+    
+    # Execute Prolog query
+    prolog_query = f"consult('{program_file}'), {query}."
+    cmd = [self.prolog_path, '-q', '-g', prolog_query, '-t', 'halt.']
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+```
+
+### Limitations and Differences
+
+| Feature | s(CASP) | SWI-Prolog |
+|---------|---------|-------------|
+| **Reasoning Style** | Answer Set Programming | Traditional Prolog |
+| **Constraints** | Built-in constraint handling | Limited constraint support |
+| **Explanations** | Natural language justifications | Basic success/failure |
+| **Uncertainty** | Probabilistic reasoning | Deterministic only |
+| **Meta-Predicates** | Rich meta-reasoning | Basic meta-predicates |
+| **Legal Reasoning** | Purpose-built for legal logic | General-purpose logic |
+
+### Output Processing
+SWI-Prolog responses are simpler than s(CASP):
+
+```python
+def _parse_prolog_output(self, output: str) -> List[ScaspAnswer]:
+    """Parse Prolog output into structured answers."""
+    answers = []
+    
+    # Simple success detection
+    if 'true' in output.lower() or 'yes' in output.lower():
+        answers.append(ScaspAnswer(
+            solution={},
+            justification=['Prolog query succeeded'],
+            confidence=0.8,  # Lower confidence than s(CASP)
+            is_consistent=True
+        ))
+    
+    return answers
+```
+
+### Use Cases for SWI-Prolog Fallback
+1. **Development Environments**: When s(CASP) is not installed
+2. **Deployment Constraints**: Environments where s(CASP) cannot be deployed
+3. **Simple Legal Queries**: Basic fact-checking that doesn't require advanced reasoning
+4. **Backup Availability**: Ensuring system uptime when s(CASP) encounters issues
+
 ## s(CASP) Rule Processing Pipeline
 
 ### 1. Document Loading
@@ -63,48 +153,36 @@ def format_scasp_program(self, rules: List[ScaspRule]) -> str:
 
 ### 3. Query Execution with Fallback Strategy
 
-The `ScaspEngine` implements a three-tier approach:
+The `ScaspEngine` implements a two-tier approach:
 
 ```python
 def query(self, program: str, query: str, timeout: int = 30) -> ScaspResult:
-    """Execute a query with intelligent fallbacks."""
+    """Execute a query with formal reasoning fallbacks."""
     
-    # Tier 1: Try full complex program
+    # Tier 1: Try full complex program with s(CASP)
     result = self._query_scasp(program, query, timeout)
     
-    # Tier 2: Try simplified program if complex fails  
+    # Tier 2: Try SWI-Prolog if s(CASP) fails
     if not result.get('success'):
-        simplified_program = self._create_simplified_program(program)
-        result = self._query_scasp(simplified_program, query, timeout)
-    
-    # Tier 3: Generate intelligent fallback response
-    if not result.get('success'):
-        result = self._create_fallback_response(query, program)
+        if self.prolog_path:
+            result = self._query_prolog(program, query, timeout)
 ```
 
 ## Fallback Strategies
 
-### Tier 1: Complex Blawx Rules
-Attempts to use the full legal program as generated from `.blawx` files, including:
-- Meta-predicates like `#pred`, `holds()`, `according_to()`
-- Complex Blawx framework predicates (`blawx_*`)
-- Temporal reasoning predicates (`blawx_during`, `blawx_becomes`)
-- Defeasibility predicates (`blawx_defeated`)
+### Tier 1: s(CASP) Formal Reasoning
+Attempts to use the full legal program with s(CASP) engine, including:
+- Complex legal rules and constraints
+- Meta-predicates and temporal reasoning
+- Answer set programming with explanations
+- Probabilistic and uncertain reasoning
 
-### Tier 2: Simplified Program
-When complex rules fail, creates a simplified version by:
-
-```python
-def _create_simplified_program(self, program: str) -> str:
-    """Create a simplified version that works with s(CASP)."""
-    
-    # Skip complex predicates that cause compilation issues
-    skip_patterns = [
-        '#pred', 'blawx_', 'holds(', 'according_to(', 
-        'blawx_defeated(', 'blawx_initially(', 'blawx_ultimately(',
-        'blawx_as_of(', 'blawx_during(', 'blawx_becomes(',
-        'blawx_not_interrupted('
-    ]
+### Tier 2: SWI-Prolog Fallback
+When s(CASP) fails or is unavailable, falls back to SWI-Prolog:
+- Basic logic programming
+- Deterministic reasoning
+- Simple success/failure responses
+- Limited constraint handling
     
     # Keep only basic facts and rules
     # Add fundamental legal facts if program becomes too sparse
@@ -193,13 +271,13 @@ The frontend (`frontend/src/components/MessageBubble.tsx`) handles s(CASP) respo
 ```
 User Query → LLM Analysis → s(CASP) Reasoning → Formatted Response
                                     ↓
-                              (If complex fails)
+                              (If s(CASP) fails)
                                     ↓
-                           Simplified Reasoning → Formatted Response
+                           SWI-Prolog Reasoning → Formatted Response
                                     ↓
-                              (If still fails)
+                              (If both fail)
                                     ↓
-                           Intelligent Fallback → Formatted Response
+                              Error Response
 ```
 
 ## Performance Considerations
@@ -244,12 +322,12 @@ SCASP_DEBUG=true
 
 ### Customization Points
 - Rule filtering patterns in `_create_simplified_program()`
-- Fallback response templates in `_create_fallback_response()`
+- SWI-Prolog query execution parameters
 - Confidence calculation logic in `_calculate_confidence()`
 - Timeout values and retry strategies
 
 ## Conclusion
 
-This multi-tiered approach ensures that the Legal AI Assistant provides meaningful responses to users regardless of the complexity of the underlying legal rules. The system gracefully degrades from formal s(CASP) reasoning to simplified logic to intelligent pattern-based responses, maintaining user confidence while providing valuable legal guidance.
+This two-tiered formal reasoning approach ensures that the Legal AI Assistant relies only on established logic programming methods - s(CASP) for advanced legal reasoning and SWI-Prolog as a solid fallback. The system prioritizes formal verification and sound logical inference over pattern-based heuristics.
 
-The architecture is designed to be robust, maintainable, and extensible, allowing for future enhancements while ensuring consistent user experience across all query types and complexity levels.
+The architecture is designed to be robust, maintainable, and scalable with multiple legal acts and complex rule sets. By focusing exclusively on formal reasoning systems, the solution maintains logical integrity while providing reliable legal guidance across diverse query types and complexity levels.
