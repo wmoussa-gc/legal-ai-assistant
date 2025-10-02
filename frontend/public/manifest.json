@@ -1,0 +1,9 @@
+{
+  "short_name": "Legal AI",
+  "name": "Legal AI Assistant",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff"
+}

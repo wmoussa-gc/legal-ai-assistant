@@ -227,5 +227,7 @@ dist/
 build/
 *.tsbuildinfo
 
-# Frontend public directory (if generated)
-frontend/public/
+# Note: frontend/public/ contains source files like index.html and should be committed
+# Only ignore generated/build artifacts in public if needed
+# frontend/public/
+
