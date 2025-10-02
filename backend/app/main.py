@@ -132,14 +132,10 @@ if FASTAPI_AVAILABLE:
     )
     
     # Add CORS middleware
+    # Allow localhost for local development and *.app.github.dev for Codespaces
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000", 
-            "http://127.0.0.1:3000",
-            "http://localhost:3001",
-            "http://127.0.0.1:3001"
-        ],  # React dev server
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://.*\.app\.github\.dev$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

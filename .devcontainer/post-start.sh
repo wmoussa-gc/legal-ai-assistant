@@ -19,17 +19,22 @@ if [ -n "$CODESPACE_NAME" ]; then
     BACKEND_URL="https://$CODESPACE_NAME-8000.app.github.dev"
     FRONTEND_URL="https://$CODESPACE_NAME-3000.app.github.dev"
     
-    # Update .env file with Codespace URLs if in Codespaces
-    ENV_FILE="${CODESPACE_VSCODE_FOLDER:-/workspaces/legal-ai-assistant}/.env"
-    if [ -f "$ENV_FILE" ]; then
+    # Update root .env file with Codespace URLs
+    ROOT_ENV="${CODESPACE_VSCODE_FOLDER:-/workspaces/legal-ai-assistant}/.env"
+    if [ -f "$ROOT_ENV" ]; then
         # Update or add REACT_APP_API_URL
-        if grep -q "REACT_APP_API_URL=" "$ENV_FILE"; then
-            sed -i "s|REACT_APP_API_URL=.*|REACT_APP_API_URL=$BACKEND_URL|g" "$ENV_FILE"
+        if grep -q "REACT_APP_API_URL=" "$ROOT_ENV"; then
+            sed -i "s|REACT_APP_API_URL=.*|REACT_APP_API_URL=$BACKEND_URL|g" "$ROOT_ENV"
         else
-            echo "REACT_APP_API_URL=$BACKEND_URL" >> "$ENV_FILE"
+            echo "REACT_APP_API_URL=$BACKEND_URL" >> "$ROOT_ENV"
         fi
-        echo "✅ Updated .env with backend URL: $BACKEND_URL"
+        echo "✅ Updated root .env with backend URL: $BACKEND_URL"
     fi
+    
+    # Create/update frontend .env file
+    FRONTEND_ENV="${CODESPACE_VSCODE_FOLDER:-/workspaces/legal-ai-assistant}/frontend/.env"
+    echo "REACT_APP_API_URL=$BACKEND_URL" > "$FRONTEND_ENV"
+    echo "✅ Created frontend/.env with backend URL: $BACKEND_URL"
     
     echo ""
     echo "🌐 Service URLs (will be available once you start the servers):"

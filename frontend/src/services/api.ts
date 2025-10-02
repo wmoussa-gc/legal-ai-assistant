@@ -5,6 +5,11 @@ import { LegalQuery, LegalResponse, SystemStatus, DocumentInfo } from '../types'
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// Debug: Log the API URL being used
+console.log('🔧 API Configuration:');
+console.log('  - REACT_APP_API_URL env var:', process.env.REACT_APP_API_URL);
+console.log('  - Using API_BASE_URL:', API_BASE_URL);
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
