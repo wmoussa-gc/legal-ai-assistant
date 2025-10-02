@@ -1,8 +1,7 @@
 // Document Details Component
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import ApiService from '../services/api';
 
 const Modal = styled.div`
   position: fixed;
@@ -212,11 +211,7 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ documentSlug, onClose
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    loadDocumentDetails();
-  }, [documentSlug]);
-
-  const loadDocumentDetails = async () => {
+  const loadDocumentDetails = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -233,7 +228,11 @@ const DocumentDetails: React.FC<DocumentDetailsProps> = ({ documentSlug, onClose
     } finally {
       setLoading(false);
     }
-  };
+  }, [documentSlug]);
+
+  useEffect(() => {
+    loadDocumentDetails();
+  }, [loadDocumentDetails]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
