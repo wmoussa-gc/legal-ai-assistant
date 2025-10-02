@@ -6,26 +6,53 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - ./data:/app/data
       - ./backend:/app
+      - backend_node_modules:/app/node_modules
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - legal-ai-network
+    depends_on:
+      - prolog-service
 
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
+      # Use Codespace URLs if available, fallback to localhost
+      - REACT_APP_API_URL=${CODESPACE_NAME:+https://${CODESPACE_NAME}-8000.app.github.dev}${CODESPACE_NAME:-http://localhost:8000}
+      - GENERATE_SOURCEMAP=false
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     command: npm start
+    networks:
+      - legal-ai-network
+    depends_on:
+      - backend
 
-  # Future: Add s(CASP) service container
-  # scasp:
-  #   image: swi-prolog:latest
-  #   volumes:
-  #     - ./data:/data
+  # SWI-Prolog service for s(CASP) logic processing
+  prolog-service:
+    image: swipl/swipl:stable
+    volumes:
+      - ./data:/data
+      - ./backend/services:/app/services
+    command: swipl --quiet --goal=halt --stand_alone=true
+    networks:
+      - legal-ai-network
+
+volumes:
+  backend_node_modules:
+  frontend_node_modules:
+
+networks:
+  legal-ai-network:
+    driver: bridge

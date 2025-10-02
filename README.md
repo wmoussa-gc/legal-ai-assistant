@@ -46,8 +46,75 @@ Think of it as a "mathematical reasoning engine" that can prove legal conclusion
 
 **Example transformation**:
 ```
+**Example transformation**:
+```
 Legal Text: "A Canadian citizen may request access to government records"
 s(CASP) Rule: access_right(Person, Record) :- canadian_citizen(Person), government_record(Record)
+```
+
+---
+
+## 🚀 **Quick Start with GitHub Codespaces** ⭐
+
+The fastest way to get started! Click the button below to open this project in GitHub Codespaces with everything pre-configured:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/wmoussa-gc/legal-ai-assistant)
+
+### **What You Get Instantly:**
+- ✅ **Pre-configured Development Environment**: SWI-Prolog, Python, Node.js all installed
+- ✅ **VS Code Extensions**: Python, TypeScript, Docker, and Prolog support
+- ✅ **Port Forwarding**: Automatic HTTPS URLs for your services
+- ✅ **Environment Setup**: Ready-to-use development containers
+
+### **Codespace Setup (30 seconds):**
+
+1. **Open in Codespaces** → Click the badge above or create from GitHub
+2. **Add Azure OpenAI Keys** → Set your secrets in Codespace settings:
+   ```
+   AZURE_OPENAI_API_KEY=your_azure_api_key_here
+   AZURE_OPENAI_ENDPOINT=your_azure_endpoint_here
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+   AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name
+   ```
+3. **Start Services** → Run in the terminal:
+   ```bash
+   ./setup.sh
+   ```
+
+4. **Access Your App** → Codespaces will show you the URLs:
+   - 🌐 **Frontend**: `https://[codespace-name]-3000.app.github.dev`
+   - 🔧 **Backend API**: `https://[codespace-name]-8000.app.github.dev`
+   - 📚 **API Docs**: `https://[codespace-name]-8000.app.github.dev/docs`
+
+### **Development Commands:**
+```bash
+# Quick commands (use our dev script)
+./dev.sh start      # Start all services
+./dev.sh stop       # Stop all services  
+./dev.sh logs       # View logs
+./dev.sh check      # Check service health
+
+# Manual Docker commands
+docker-compose up -d              # Start in background
+docker-compose logs -f            # Follow logs
+docker-compose down               # Stop services
+```
+
+### **Adding API Keys in Codespaces:**
+
+1. Go to your Codespace settings: `https://github.com/settings/codespaces`
+2. Click **"New secret"** and add:
+   - Name: `AZURE_OPENAI_API_KEY`, Value: `your_azure_openai_api_key`
+   - Name: `AZURE_OPENAI_ENDPOINT`, Value: `your_azure_openai_endpoint`
+   - Name: `AZURE_OPENAI_API_VERSION`, Value: `2024-02-15-preview`
+   - Name: `AZURE_OPENAI_DEPLOYMENT_NAME`, Value: `your_deployment_name`
+3. Restart your Codespace for changes to take effect
+
+> **💡 Tip**: Codespace secrets are more secure than `.env` files and work automatically across all your codespaces.
+
+---
+
+## 📦 **Local Installation**
 ```
 
 ### **System Architecture Overview**
