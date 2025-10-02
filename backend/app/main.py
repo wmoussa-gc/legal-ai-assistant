@@ -132,10 +132,27 @@ if FASTAPI_AVAILABLE:
     )
     
     # Add CORS middleware
-    # Allow localhost for local development and *.app.github.dev for Codespaces
+    # Allow localhost for local development and all origins for Codespaces
+    # In production, you should restrict this to specific domains
+    import os
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ]
+    
+    # Add Codespace URL if detected
+    codespace_name = os.getenv("CODESPACE_NAME")
+    if codespace_name:
+        allowed_origins.extend([
+            f"https://{codespace_name}-3000.app.github.dev",
+            f"https://{codespace_name}-3001.app.github.dev",
+        ])
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://.*\.app\.github\.dev$",
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
