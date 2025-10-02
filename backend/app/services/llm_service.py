@@ -351,7 +351,8 @@ Respond in JSON format:
             )
             
         except Exception as e:
-            raise Exception(f"{"Azure OpenAI" if self.is_azure_openai else "OpenAI"} API error: {e}")
+            provider = "Azure OpenAI" if self.is_azure_openai else "OpenAI"
+            raise Exception(f"{provider} API error: {e}")
     
     async def _query_anthropic(self, prompt: str, max_tokens: int = 1000) -> LLMResponse:
         """Query Anthropic Claude."""
