@@ -16,14 +16,33 @@ if [ -z "$AZURE_OPENAI_API_KEY" ] || [ -z "$AZURE_OPENAI_ENDPOINT" ]; then
 fi
 
 if [ -n "$CODESPACE_NAME" ]; then
+    BACKEND_URL="https://$CODESPACE_NAME-8000.app.github.dev"
+    FRONTEND_URL="https://$CODESPACE_NAME-3000.app.github.dev"
+    
+    # Update .env file with Codespace URLs if in Codespaces
+    ENV_FILE="${CODESPACE_VSCODE_FOLDER:-/workspaces/legal-ai-assistant}/.env"
+    if [ -f "$ENV_FILE" ]; then
+        # Update or add REACT_APP_API_URL
+        if grep -q "REACT_APP_API_URL=" "$ENV_FILE"; then
+            sed -i "s|REACT_APP_API_URL=.*|REACT_APP_API_URL=$BACKEND_URL|g" "$ENV_FILE"
+        else
+            echo "REACT_APP_API_URL=$BACKEND_URL" >> "$ENV_FILE"
+        fi
+        echo "✅ Updated .env with backend URL: $BACKEND_URL"
+    fi
+    
     echo ""
     echo "🌐 Service URLs (will be available once you start the servers):"
-    echo "   - Backend API: https://$CODESPACE_NAME-8000.app.github.dev"
-    echo "   - Frontend:    https://$CODESPACE_NAME-3000.app.github.dev"
-    echo "   - API Docs:    https://$CODESPACE_NAME-8000.app.github.dev/docs"
+    echo "   - Backend API: $BACKEND_URL"
+    echo "   - Frontend:    $FRONTEND_URL"
+    echo "   - API Docs:    $BACKEND_URL/docs"
 fi
 
 echo ""
 echo "🚀 To start the application:"
 echo "   Terminal 1: cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
-echo "   Terminal 2: cd frontend && npm start"
+if [ -n "$CODESPACE_NAME" ]; then
+    echo "   Terminal 2: cd frontend && REACT_APP_API_URL=https://$CODESPACE_NAME-8000.app.github.dev npm start"
+else
+    echo "   Terminal 2: cd frontend && npm start"
+fi
