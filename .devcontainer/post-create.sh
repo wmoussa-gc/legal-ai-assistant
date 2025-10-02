@@ -12,10 +12,18 @@ mkdir -p /workspace/temp
 # Install SWI-Prolog and s(CASP)
 echo "📦 Installing SWI-Prolog..."
 sudo apt-get update
-sudo apt-get install -y software-properties-common apt-transport-https
-sudo apt-add-repository ppa:swi-prolog/stable
-sudo apt-get update
-sudo apt-get install -y swi-prolog
+
+# Check if we're on Ubuntu (supports PPA) or Debian (use native packages)
+if grep -q "Ubuntu" /etc/os-release; then
+    echo "Detected Ubuntu - using PPA for latest SWI-Prolog..."
+    sudo apt-get install -y software-properties-common
+    sudo apt-add-repository ppa:swi-prolog/stable -y
+    sudo apt-get update
+    sudo apt-get install -y swi-prolog
+else
+    echo "Detected Debian/other - using native SWI-Prolog package..."
+    sudo apt-get install -y swi-prolog
+fi
 
 # Install additional system dependencies
 echo "📦 Installing system dependencies..."

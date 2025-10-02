@@ -9,18 +9,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
 # Install system dependencies including SWI-Prolog
+# Note: Installing from Debian repositories (not PPA which is Ubuntu-only)
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    apt-transport-https \
     curl \
     wget \
     git \
     build-essential \
     cmake \
     pkg-config \
-    && apt-add-repository ppa:swi-prolog/stable \
-    && apt-get update \
-    && apt-get install -y swi-prolog \
+    swi-prolog \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
