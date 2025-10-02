@@ -46,8 +46,6 @@ Think of it as a "mathematical reasoning engine" that can prove legal conclusion
 
 **Example transformation**:
 ```
-**Example transformation**:
-```
 Legal Text: "A Canadian citizen may request access to government records"
 s(CASP) Rule: access_right(Person, Record) :- canadian_citizen(Person), government_record(Record)
 ```
