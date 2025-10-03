@@ -355,10 +355,72 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
             intent = "general_question"
             domain = "access_to_information"
             entities = app_state.llm_service.extract_legal_entities(query_text) if app_state.llm_service else []
-            formal_query = f"user_query('{query_text.replace(' ', '_')}')"
+            # Don't set formal_query to user_query - let fact extraction handle it
+            formal_query = None
+        
+        # Step 1.5: Extract facts from the query (THE FIX!)
+        query_facts_result = None
+        scenario_facts = ""
+        if app_state.llm_service:
+            query_facts_result = await app_state.llm_service.extract_query_facts(
+                query_text,
+                ['person', 'age', 'canadian_citizen', 'military', 'record']
+            )
+            if query_facts_result and query_facts_result.get('prolog_facts'):
+                scenario_facts = "\n".join(query_facts_result['prolog_facts']) + "\n\n"
+                print(f"📋 Extracted scenario facts:\n{scenario_facts}")
+                
+                # Update the formal query if one was extracted
+                if query_facts_result.get('query_predicate'):
+                    formal_query = query_facts_result['query_predicate']
+                    print(f"🎯 Using query predicate: {formal_query}")
+                else:
+                    # If no query predicate was extracted, use a generic one
+                    # that at least checks if the facts exist
+                    if query_facts_result.get('entities'):
+                        first_entity = query_facts_result['entities'][0]
+                        formal_query = f"person({first_entity})"
+                        print(f"⚠️  No query predicate extracted, using: {formal_query}")
+        
+        # Ensure we always have a formal_query set
+        if not formal_query:
+            # Last resort: create a simple query based on the text
+            print("⚠️  No formal query available, using generic query")
+            formal_query = "person(_)"  # Just check if any person exists
         
         # Step 2: Find relevant rules
         relevant_program = app_state.find_relevant_rules(entities + [query_text])
+        
+        # Combine scenario facts with legal rules
+        if scenario_facts:
+            # Add bridge rules to connect simple facts to Blawx predicates
+            bridge_rules = """
+% Bridge rules to connect simple facts to Blawx structure
+% These translate our extracted facts into the format Blawx expects
+
+% For eligibility queries about wills
+eligible(Person) :-
+    person(Person),
+    age(Person, Age),
+    Age >= 18.
+
+eligible(Person) :-
+    person(Person),
+    military(Person),
+    age(Person, Age),
+    Age >= 14.
+
+% For access to information queries  
+has_right_to_access(Person, Record) :-
+    canadian_citizen(Person),
+    record(Record).
+
+has_right_to_access(Person, Record) :-
+    permanent_resident(Person),
+    record(Record).
+
+"""
+            relevant_program = scenario_facts + bridge_rules + relevant_program
         
         # Step 3: Execute formal verification
         verification_result = None

@@ -199,6 +199,35 @@ Respond in JSON format:
     "corrections": [...],
     "confidence_adjustment": +/-0.0-1.0
 }}
+""",
+            
+            'extract_facts': """
+You are a legal query analyzer. Extract factual information from a user's question and convert it to Prolog facts.
+
+User question: {query}
+
+Your task:
+1. Identify entities (people, organizations, documents)
+2. Extract attributes (age, status, role, etc.)
+3. Generate simple Prolog facts that represent the scenario
+
+Available legal categories: {available_categories}
+
+Examples:
+- "Can a 20-year-old make a will?" → person(user_person). age(user_person, 20).
+- "Can a Canadian citizen request records?" → person(user). canadian_citizen(user).
+- "Can an active military member aged 15 make a will?" → person(user). military(user). age(user, 15).
+
+Respond in JSON format:
+{{
+    "entities": ["user_person", "document_x"],
+    "prolog_facts": [
+        "person(user_person).",
+        "age(user_person, 20)."
+    ],
+    "query_predicate": "eligible(user_person)",
+    "explanation": "..."
+}}
 """
         }
     
@@ -308,6 +337,123 @@ Respond in JSON format:
                 'corrections': [],
                 'confidence_adjustment': -0.1
             }
+    
+    async def extract_query_facts(self, query: str, available_categories: List[str]) -> Dict[str, Any]:
+        """Extract facts from a user query and generate Prolog facts.
+        
+        This is the KEY method that solves the missing facts problem.
+        It analyzes the user's question and generates Prolog facts about the scenario.
+        """
+        prompt = self.legal_prompt_templates['extract_facts'].format(
+            query=query,
+            available_categories=', '.join(available_categories)
+        )
+        
+        # Try with LLM first
+        if self.openai_client:
+            try:
+                llm_response = await self._query_openai(prompt, max_tokens=500)
+                result = json.loads(llm_response.content)
+                return result
+            except (json.JSONDecodeError, Exception) as e:
+                print(f"LLM fact extraction failed: {e}, using fallback")
+        
+        # Fallback: Pattern matching for common scenarios
+        return self._fallback_extract_facts(query)
+    
+    def _fallback_extract_facts(self, query: str) -> Dict[str, Any]:
+        """Fallback fact extraction using pattern matching."""
+        query_lower = query.lower()
+        entities = []
+        prolog_facts = []
+        query_predicate = ""
+        
+        # Extract age - handle multiple patterns
+        age_match = re.search(r'(\d+)[\s-]?year[\s-]?old', query_lower)
+        if not age_match:
+            # Try "I am X years old" pattern
+            age_match = re.search(r'i am (\d+) years? old', query_lower)
+        if not age_match:
+            # Try "aged X" pattern
+            age_match = re.search(r'aged?\s+(\d+)', query_lower)
+        
+        if age_match:
+            age = age_match.group(1)
+            entities.append("user_person")
+            prolog_facts.append("person(user_person).")
+            prolog_facts.append(f"age(user_person, {age}).")
+            
+            # Check if asking about wills
+            if 'will' in query_lower:
+                query_predicate = "eligible(user_person)"
+        
+        # Check for Canadian citizen
+        if 'canadian citizen' in query_lower:
+            if not entities:
+                entities.append("user")
+            prolog_facts.append("person(user).")
+            prolog_facts.append("canadian_citizen(user).")
+            
+            # Check if asking about access to information
+            if any(term in query_lower for term in ['request', 'access', 'record', 'document']):
+                if not query_predicate:
+                    query_predicate = "has_right_to_access(user, record_x)"
+                    prolog_facts.append("record(record_x).")
+        
+        # Check for military member
+        if 'military' in query_lower or 'active military' in query_lower:
+            if 'user_person' not in entities:
+                entities.append("user_person")
+                prolog_facts.append("person(user_person).")
+            prolog_facts.append("military(user_person).")
+            
+            # Extract age for military member
+            if age_match:
+                age = age_match.group(1)
+                if f"age(user_person, {age})." not in prolog_facts:
+                    prolog_facts.append(f"age(user_person, {age}).")
+            elif 'aged' in query_lower or 'age' in query_lower:
+                # Try to find age mentioned near 'aged' or 'age'
+                age_alt_match = re.search(r'aged?\s+(\d+)', query_lower)
+                if age_alt_match:
+                    age = age_alt_match.group(1)
+                    prolog_facts.append(f"age(user_person, {age}).")
+            
+            if 'will' in query_lower and not query_predicate:
+                query_predicate = "eligible(user_person)"
+        
+        # Check for permanent resident
+        if 'permanent resident' in query_lower:
+            if not entities:
+                entities.append("user")
+            prolog_facts.append("person(user).")
+            prolog_facts.append("permanent_resident(user).")
+            
+            if any(term in query_lower for term in ['request', 'access', 'record']):
+                if not query_predicate:
+                    query_predicate = "has_right_to_access(user, record_x)"
+                    prolog_facts.append("record(record_x).")
+        
+        # If we found nothing specific, create a generic person
+        if not entities:
+            entities.append("user")
+            prolog_facts.append("person(user).")
+        
+        # Ensure we always have a valid query predicate
+        # If nothing was set, use a simple existence check
+        if not query_predicate:
+            if entities:
+                query_predicate = f"person({entities[0]})"
+            else:
+                # Last resort: just check if any person exists
+                query_predicate = "person(_)"
+        
+        return {
+            "entities": entities,
+            "prolog_facts": prolog_facts,
+            "query_predicate": query_predicate,
+            "explanation": f"Extracted {len(prolog_facts)} facts from query using pattern matching"
+        }
     
     async def _query_openai(self, prompt: str, max_tokens: int = 1000) -> LLMResponse:
         """Query OpenAI GPT-4 or Azure OpenAI."""
