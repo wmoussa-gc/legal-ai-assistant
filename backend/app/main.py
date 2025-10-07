@@ -26,6 +26,7 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
     # Create mock classes for when FastAPI is not available
+
     class MockFile:
         def __call__(self, *args, **kwargs):
             return None
@@ -47,6 +48,7 @@ try:
 except ImportError:
     MODELS_AVAILABLE = False
     # Create basic mock classes
+
     class LegalQuery:
         def __init__(self, query: str, context: str = None, user_location: str = None):
             self.query = query
@@ -57,11 +59,12 @@ except ImportError:
 # Application state
 class AppState:
     """Application state management."""
+
     def __init__(self):
         self.start_time = time.time()
         self.loaded_documents: List[LegalRuleDoc] = []
         self.blawx_parser = BlawxParser()
-        
+
         # Initialize s(CASP) engine
         try:
             self.scasp_engine = ScaspEngine()
@@ -71,25 +74,25 @@ class AppState:
         except Exception as e:
             print(f"Warning: Could not initialize s(CASP) engine: {e}")
             self.scasp_engine = MockScaspEngine()
-        
+
         # Initialize LLM service
         try:
             self.llm_service = LLMService()
         except Exception as e:
             print(f"Warning: Could not initialize LLM service: {e}")
             self.llm_service = None
-        
+
         # Load initial documents
         self._load_initial_documents()
-    
+
     def _load_initial_documents(self):
         """Load initial legal documents from data directory."""
         data_dir = Path(__file__).parent.parent.parent / "data"
-        
+
         if not data_dir.exists():
             print("Warning: Data directory not found")
             return
-        
+
         for blawx_file in data_dir.glob("*.blawx"):
             try:
                 doc = self.blawx_parser.parse_file(str(blawx_file))
@@ -97,7 +100,7 @@ class AppState:
                 print(f"Loaded legal document: {doc.name}")
             except Exception as e:
                 print(f"Warning: Could not load {blawx_file}: {e}")
-    
+
     def get_all_predicates(self) -> List[str]:
         """Get all available predicates from loaded documents."""
         predicates = set()
@@ -105,14 +108,15 @@ class AppState:
             for rule in doc.scasp_rules:
                 predicates.update(rule.predicates)
         return sorted(list(predicates))
-    
+
     def find_relevant_rules(self, query_terms: List[str]) -> str:
         """Find rules relevant to query terms."""
         all_rules = []
         for doc in self.loaded_documents:
-            relevant_rules = self.blawx_parser.extract_facts_for_query(doc, query_terms)
+            relevant_rules = self.blawx_parser.extract_facts_for_query(
+                doc, query_terms)
             all_rules.extend(relevant_rules)
-        
+
         if all_rules:
             return self.blawx_parser.format_scasp_program(all_rules)
         return ""
@@ -130,7 +134,7 @@ if FASTAPI_AVAILABLE:
         docs_url="/docs",
         redoc_url="/redoc"
     )
-    
+
     # Add CORS middleware
     # Allow localhost for local development and all origins for Codespaces
     # In production, you should restrict this to specific domains
@@ -141,7 +145,7 @@ if FASTAPI_AVAILABLE:
         "http://localhost:3001",
         "http://127.0.0.1:3001",
     ]
-    
+
     # Add Codespace URL if detected
     codespace_name = os.getenv("CODESPACE_NAME")
     if codespace_name:
@@ -149,7 +153,7 @@ if FASTAPI_AVAILABLE:
             f"https://{codespace_name}-3000.app.github.dev",
             f"https://{codespace_name}-3001.app.github.dev",
         ])
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -164,7 +168,7 @@ else:
         def post(self, path): return lambda f: f
         def put(self, path): return lambda f: f
         def delete(self, path): return lambda f: f
-    
+
     app = MockApp()
 
 
@@ -191,7 +195,8 @@ async def health_check():
                 "blawx_parser": True
             },
             loaded_documents=[doc.name for doc in app_state.loaded_documents],
-            total_rules=sum(len(doc.scasp_rules) for doc in app_state.loaded_documents),
+            total_rules=sum(len(doc.scasp_rules)
+                            for doc in app_state.loaded_documents),
             uptime=time.time() - app_state.start_time
         )
     else:
@@ -245,13 +250,14 @@ async def get_document_details(slug: str):
         if doc.slug == slug:
             document = doc
             break
-    
+
     if not document:
         if FASTAPI_AVAILABLE:
-            raise HTTPException(status_code=404, detail=f"Document with slug '{slug}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document with slug '{slug}' not found")
         else:
             return {"error": f"Document with slug '{slug}' not found"}
-    
+
     # Analyze provisions
     provisions_analysis = []
     for i, provision in enumerate(document.provisions):
@@ -266,25 +272,27 @@ async def get_document_details(slug: str):
             "word_count": len(provision.text.split()),
             "index": i
         })
-    
+
     # Analyze s(CASP) rules
     rule_type_counts = {}
     predicate_counts = {}
     variable_counts = {}
-    sample_rules = {"fact": [], "rule": [], "query": [], "abducible": [], "other": []}
-    
+    sample_rules = {"fact": [], "rule": [],
+                    "query": [], "abducible": [], "other": []}
+
     for rule in document.scasp_rules:
         # Count rule types
-        rule_type_counts[rule.rule_type] = rule_type_counts.get(rule.rule_type, 0) + 1
-        
+        rule_type_counts[rule.rule_type] = rule_type_counts.get(
+            rule.rule_type, 0) + 1
+
         # Count predicates
         for pred in rule.predicates:
             predicate_counts[pred] = predicate_counts.get(pred, 0) + 1
-        
-        # Count variables  
+
+        # Count variables
         for var in rule.variables:
             variable_counts[var] = variable_counts.get(var, 0) + 1
-        
+
         # Collect sample rules (first 3 of each type)
         rule_type_key = rule.rule_type if rule.rule_type in sample_rules else "other"
         if len(sample_rules[rule_type_key]) < 3:
@@ -293,11 +301,13 @@ async def get_document_details(slug: str):
                 "variables": rule.variables,
                 "predicates": rule.predicates
             })
-    
+
     # Get top predicates and variables
-    top_predicates = sorted(predicate_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-    top_variables = sorted(variable_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-    
+    top_predicates = sorted(predicate_counts.items(),
+                            key=lambda x: x[1], reverse=True)[:10]
+    top_variables = sorted(variable_counts.items(),
+                           key=lambda x: x[1], reverse=True)[:10]
+
     return {
         "name": document.name,
         "slug": document.slug,
@@ -324,7 +334,7 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
     """Process a legal query and return a comprehensive response."""
     start_time = time.time()
     query_id = str(uuid.uuid4())
-    
+
     try:
         # Extract query text
         if MODELS_AVAILABLE:
@@ -333,17 +343,18 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
         else:
             query_text = query.get("query", "")
             context = query.get("context")
-        
+
         if not query_text:
             if FASTAPI_AVAILABLE:
-                raise HTTPException(status_code=400, detail="Query text is required")
+                raise HTTPException(
+                    status_code=400, detail="Query text is required")
             else:
                 return {"error": "Query text is required"}
-        
+
         # Step 1: Analyze the query
         if app_state.llm_service and app_state.llm_service.is_available():
             analysis = await app_state.llm_service.analyze_query(
-                query_text, 
+                query_text,
                 app_state.get_all_predicates()
             )
             intent = analysis.intent
@@ -354,10 +365,11 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
             # Fallback analysis
             intent = "general_question"
             domain = "access_to_information"
-            entities = app_state.llm_service.extract_legal_entities(query_text) if app_state.llm_service else []
+            entities = app_state.llm_service.extract_legal_entities(
+                query_text) if app_state.llm_service else []
             # Don't set formal_query to user_query - let fact extraction handle it
             formal_query = None
-        
+
         # Step 1.5: Extract facts from the query (THE FIX!)
         query_facts_result = None
         scenario_facts = ""
@@ -367,9 +379,10 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
                 ['person', 'age', 'canadian_citizen', 'military', 'record']
             )
             if query_facts_result and query_facts_result.get('prolog_facts'):
-                scenario_facts = "\n".join(query_facts_result['prolog_facts']) + "\n\n"
+                scenario_facts = "\n".join(
+                    query_facts_result['prolog_facts']) + "\n\n"
                 print(f"📋 Extracted scenario facts:\n{scenario_facts}")
-                
+
                 # Update the formal query if one was extracted
                 if query_facts_result.get('query_predicate'):
                     formal_query = query_facts_result['query_predicate']
@@ -380,17 +393,19 @@ async def process_legal_query(query: LegalQuery if MODELS_AVAILABLE else dict):
                     if query_facts_result.get('entities'):
                         first_entity = query_facts_result['entities'][0]
                         formal_query = f"person({first_entity})"
-                        print(f"⚠️  No query predicate extracted, using: {formal_query}")
-        
+                        print(
+                            f"⚠️  No query predicate extracted, using: {formal_query}")
+
         # Ensure we always have a formal_query set
         if not formal_query:
             # Last resort: create a simple query based on the text
             print("⚠️  No formal query available, using generic query")
             formal_query = "person(_)"  # Just check if any person exists
-        
+
         # Step 2: Find relevant rules
-        relevant_program = app_state.find_relevant_rules(entities + [query_text])
-        
+        relevant_program = app_state.find_relevant_rules(
+            entities + [query_text])
+
         # Combine scenario facts with legal rules
         if scenario_facts:
             # Add bridge rules to connect simple facts to Blawx predicates
@@ -421,21 +436,25 @@ has_right_to_access(Person, Record) :-
 
 """
             relevant_program = scenario_facts + bridge_rules + relevant_program
-        
+
         # Step 3: Execute formal verification
         verification_result = None
+        scasp_answers = []  # Store answers for confidence calculation
         if relevant_program and formal_query:
-            scasp_result = app_state.scasp_engine.query(relevant_program, formal_query.split(":-")[0])
-            
+            scasp_result = app_state.scasp_engine.query(
+                relevant_program, formal_query.split(":-")[0])
+            scasp_answers = scasp_result.answers  # Store for later use
+
             if MODELS_AVAILABLE:
                 verification_result = FormalVerification(
                     query_executed=formal_query,
                     success=scasp_result.success,
-                    solutions=[answer.solution for answer in scasp_result.answers],
+                    solutions=[
+                        answer.solution for answer in scasp_result.answers],
                     execution_time=scasp_result.execution_time,
                     error_message=scasp_result.error_message
                 )
-        
+
         # Step 4: Generate natural language response
         if app_state.llm_service and app_state.llm_service.is_available():
             llm_response = await app_state.llm_service.generate_legal_response(
@@ -445,7 +464,17 @@ has_right_to_access(Person, Record) :-
                 str(verification_result) if verification_result else "No formal verification available"
             )
             answer = llm_response.content
-            confidence = llm_response.confidence
+
+            # Use formal verification confidence if available and higher
+            if verification_result and verification_result.success and scasp_answers:
+                # Formal verification succeeded - use confidence from formal proof
+                formal_confidence = max(
+                    [ans.confidence for ans in scasp_answers])
+                # Use the higher of LLM or formal verification confidence
+                confidence = max(llm_response.confidence, formal_confidence)
+            else:
+                confidence = llm_response.confidence
+
             reasoning_steps = [
                 {"step_number": i+1, "description": step, "conclusion": step}
                 for i, step in enumerate(llm_response.reasoning_steps)
@@ -459,7 +488,7 @@ has_right_to_access(Person, Record) :-
                 answer = f"I cannot provide a definitive answer to your query based on the available legal rules. This may require consultation with a legal professional."
                 confidence = 0.4
             reasoning_steps = []
-        
+
         # Step 5: Extract citations
         legal_citations = []
         for doc in app_state.loaded_documents:
@@ -469,7 +498,8 @@ has_right_to_access(Person, Record) :-
                         citation = LegalCitation(
                             provision_id=provision.id,
                             title=provision.title,
-                            text=provision.text[:200] + "..." if len(provision.text) > 200 else provision.text,
+                            text=provision.text[:200] + "..." if len(
+                                provision.text) > 200 else provision.text,
                             source_document=doc.name,
                             section=provision.section_number
                         )
@@ -482,34 +512,39 @@ has_right_to_access(Person, Record) :-
                             "source_document": doc.name,
                             "section": provision.section_number
                         })
-        
+
         processing_time = time.time() - start_time
-        
+
         # Build response
         if MODELS_AVAILABLE:
             confidence_level = confidence_to_level(confidence)
             recommend_lawyer = should_recommend_lawyer(
-                confidence, 
-                QueryIntent(intent) if intent in [e.value for e in QueryIntent] else QueryIntent.GENERAL_QUESTION,
+                confidence,
+                QueryIntent(intent) if intent in [
+                    e.value for e in QueryIntent] else QueryIntent.GENERAL_QUESTION,
                 verification_result is not None and verification_result.success
             )
-            
+
             return LegalResponse(
                 query_id=query_id,
                 original_query=query_text,
                 answer=answer,
                 confidence=confidence,
                 confidence_level=confidence_level,
-                intent=QueryIntent(intent) if intent in [e.value for e in QueryIntent] else QueryIntent.GENERAL_QUESTION,
-                legal_domain=LegalDomain(domain) if domain in [e.value for e in LegalDomain] else LegalDomain.GENERAL,
+                intent=QueryIntent(intent) if intent in [
+                    e.value for e in QueryIntent] else QueryIntent.GENERAL_QUESTION,
+                legal_domain=LegalDomain(domain) if domain in [
+                    e.value for e in LegalDomain] else LegalDomain.GENERAL,
                 entities_found=entities,
                 reasoning_steps=reasoning_steps,
                 legal_citations=legal_citations,
                 formal_verification=verification_result,
                 model_used=llm_response.model_used if 'llm_response' in locals() else "fallback",
                 processing_time=processing_time,
-                limitations=["This is AI-generated legal information and should not replace professional legal advice"],
-                follow_up_questions=["Would you like more specific information about any particular aspect?"],
+                limitations=[
+                    "This is AI-generated legal information and should not replace professional legal advice"],
+                follow_up_questions=[
+                    "Would you like more specific information about any particular aspect?"],
                 human_lawyer_recommended=recommend_lawyer
             )
         else:
@@ -529,10 +564,11 @@ has_right_to_access(Person, Record) :-
                 "limitations": ["This is AI-generated legal information and should not replace professional legal advice"],
                 "human_lawyer_recommended": confidence < 0.6
             }
-    
+
     except Exception as e:
         if FASTAPI_AVAILABLE:
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal server error: {str(e)}")
         else:
             return {"error": f"Internal server error: {str(e)}"}
 
@@ -542,35 +578,37 @@ async def upload_document(file: UploadFile = File(...)):
     """Upload and parse a new legal document."""
     if not file.filename.endswith('.blawx'):
         if FASTAPI_AVAILABLE:
-            raise HTTPException(status_code=400, detail="Only .blawx files are supported")
+            raise HTTPException(
+                status_code=400, detail="Only .blawx files are supported")
         else:
             return {"error": "Only .blawx files are supported"}
-    
+
     try:
         # Save uploaded file temporarily
         temp_path = Path(f"/tmp/{file.filename}")
         content = await file.read()
-        
+
         with open(temp_path, 'wb') as f:
             f.write(content)
-        
+
         # Parse the document
         doc = app_state.blawx_parser.parse_file(str(temp_path))
         app_state.loaded_documents.append(doc)
-        
+
         # Clean up
         temp_path.unlink()
-        
+
         return {
             "message": f"Successfully uploaded and parsed {file.filename}",
             "document_name": doc.name,
             "provisions_count": len(doc.provisions),
             "rules_count": len(doc.scasp_rules)
         }
-    
+
     except Exception as e:
         if FASTAPI_AVAILABLE:
-            raise HTTPException(status_code=500, detail=f"Failed to process document: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to process document: {str(e)}")
         else:
             return {"error": f"Failed to process document: {str(e)}"}
 
@@ -583,15 +621,16 @@ if __name__ == "__main__":
     else:
         print("FastAPI not available. Install with: pip install fastapi uvicorn")
         print("Running in mock mode for development...")
-        
+
         # Simple test of core functionality
         async def test_query():
-            query = {"query": "Can a Canadian citizen request records from Health Canada?"}
+            query = {
+                "query": "Can a Canadian citizen request records from Health Canada?"}
             result = await process_legal_query(query)
             print("Test query result:")
             print(f"Answer: {result.get('answer', 'No answer')}")
             print(f"Confidence: {result.get('confidence', 0)}")
-        
+
         # Run test
         import asyncio
         asyncio.run(test_query())
