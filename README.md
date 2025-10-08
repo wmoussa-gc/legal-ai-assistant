@@ -1,20 +1,20 @@
-# 🏛️ Legal AI Assistant
+# Legal AI Assistant
 
 > *A ChatGPT-like interface for legal queries with **guaranteed accuracy** through formal verification using s(CASP) logic programming.*
 
-## 🎯 **Core Value Proposition**
+## **Core Value Proposition**
 
 Unlike traditional AI chatbots that can "hallucinate" or provide incorrect legal advice, this system **formally verifies every answer** against structured legal rules, providing:
 
-- ✅ **Guaranteed Accuracy**: Every response backed by formal logic proofs
-- 📜 **Source Citations**: Direct links to specific legal provisions  
-- 🎯 **Confidence Scoring**: Transparent certainty levels (0-100%)
-- 🔍 **Deep Document Analysis**: Comprehensive breakdown of legal texts
-- 💬 **Natural Language**: Complex legal concepts explained simply
+- **Guaranteed Accuracy**: Every response backed by formal logic proofs
+- **Source Citations**: Direct links to specific legal provisions  
+- **Confidence Scoring**: Transparent certainty levels (0-100%)
+- **Deep Document Analysis**: Comprehensive breakdown of legal texts
+- **Natural Language**: Complex legal concepts explained simply
 
 ---
 
-## 🧠 **Core Concepts Explained**
+## **Core Concepts Explained**
 
 ### **What is s(CASP)?**
 **s(CASP)** (***s***tochastic ***C***onstraint ***A***nswer ***S***et ***P***rogramming) is a formal logic programming paradigm that:
@@ -24,7 +24,7 @@ Unlike traditional AI chatbots that can "hallucinate" or provide incorrect legal
 - **Provides explanations** for every conclusion
 - **Guarantees soundness** - if it says something is true, it IS true
 
-**Example**: Instead of an AI guessing "Yes, you can access those records", s(CASP **proves** it by showing the logical chain: `citizen(X) ∧ government_record(Y) → access_right(X,Y)`
+**Example**: Instead of an AI guessing "Yes, you can access those records", s(CASP) **proves** it by showing the logical chain: `citizen(X) ∧ government_record(Y) → access_right(X,Y)`
 
 ### **What is SWI-Prolog?**
 **SWI-Prolog** is the underlying logic programming engine that:
@@ -39,10 +39,10 @@ Think of it as a "mathematical reasoning engine" that can prove legal conclusion
 ### **What are .blawx Files?**
 **.blawx files** are structured legal documents that contain:
 
-- **📄 Legal Provisions**: Original legal text (human-readable)
-- **⚖️ s(CASP) Rules**: Formal logic representation (machine-executable)  
-- **🔗 Relationships**: Connections between legal concepts
-- **📊 Metadata**: Section numbers, categories, citations
+- **Legal Provisions**: Original legal text (human-readable)
+- **s(CASP) Rules**: Formal logic representation (machine-executable)  
+- **Relationships**: Connections between legal concepts
+- **Metadata**: Section numbers, categories, citations
 
 **Example transformation**:
 ```
@@ -52,17 +52,17 @@ s(CASP) Rule: access_right(Person, Record) :- canadian_citizen(Person), governme
 
 ---
 
-## 🚀 **Quick Start with GitHub Codespaces** ⭐
+## **Quick Start with GitHub Codespaces**
 
 The fastest way to get started! Click the button below to open this project in GitHub Codespaces with everything pre-configured:
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/wmoussa-gc/legal-ai-assistant)
 
 ### **What You Get Instantly:**
-- ✅ **Pre-configured Development Environment**: SWI-Prolog, Python, Node.js all installed
-- ✅ **VS Code Extensions**: Python, TypeScript, Docker, and Prolog support
-- ✅ **Port Forwarding**: Automatic HTTPS URLs for your services
-- ✅ **Environment Setup**: Ready-to-use development containers
+- **Pre-configured Development Environment**: SWI-Prolog, Python, Node.js all installed
+- **VS Code Extensions**: Python, TypeScript, Docker, and Prolog support
+- **Port Forwarding**: Automatic HTTPS URLs for your services
+- **Environment Setup**: Ready-to-use development containers
 
 ### **Codespace Setup (30 seconds):**
 
@@ -112,20 +112,17 @@ docker-compose down               # Stop services
 
 ---
 
-## 📦 **Local Installation**
-```
-
 ### **System Architecture Overview**
 
 ```mermaid
 graph LR
-    A[👤 User Query] --> B[🧠 LLM Service]
-    B --> C[⚖️ sCASP Engine] 
-    C --> D[📚 Legal Rules]
-    D --> E[✅ Formal Proof]
-    E --> F[💬 Natural Language Response]
+    A[User Query] --> B[LLM Service]
+    B --> C[sCASP Engine] 
+    C --> D[Legal Rules]
+    D --> E[Formal Proof]
+    E --> F[Natural Language Response]
     
-    G[📄 .blawx Files] --> H[🔍 Blawx Parser]
+    G[blawx Files] --> H[Blawx Parser]
     H --> D
 ```
 
@@ -137,32 +134,7 @@ graph LR
 
 ---
 
-## 🚀 **Quick Start Guide**
-
-### **📋 Prerequisites**
-
-#### **Both Platforms:**
-- **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
-- **Python** (3.9 or higher) - [Download here](https://python.org/)
-- **Git** - [Download here](https://git-scm.com/)
-
-#### **macOS Additional:**
-```bash
-# Install SWI-Prolog
-brew install swi-prolog
-
-# Install build tools
-xcode-select --install
-```
-
-#### **Windows Additional:**
-```powershell
-# Install SWI-Prolog from: https://www.swi-prolog.org/download/stable
-# Install Visual Studio Build Tools or Visual Studio Community
-# Install Git for Windows: https://git-scm.com/download/win
-```
-
-### **📦 Installation**
+### **Installation**
 
 #### **1. Clone the Repository**
 ```bash
@@ -229,72 +201,36 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 npm start
 ```
 
-**🎉 Open http://localhost:3000 to use the application!**
+Open http://localhost:3000 to use the application!
 
----
 
-## 📁 **Project Structure**
+## **Key Features Deep Dive**
 
-```
-legal-ai-assistant/
-├── 🔧 backend/
-│   ├── app/
-│   │   ├── main.py                 # FastAPI application & API endpoints
-│   │   ├── models/                 # Pydantic data models
-│   │   └── services/               # Core business logic
-│   │       ├── blawx_parser.py     # Parse .blawx files → s(CASP) rules
-│   │       ├── scasp_engine.py     # s(CASP) formal reasoning engine
-│   │       ├── llm_service.py      # Azure OpenAI GPT-4 integration
-│   │       └── document_manager.py # Legal document management
-│   ├── bin/
-│   │   └── scasp                   # s(CASP) reasoning engine binary
-│   └── requirements.txt            # Python dependencies
-├── 💻 frontend/
-│   ├── src/
-│   │   ├── components/             # React UI components
-│   │   │   ├── ChatInterface.tsx   # Main chat interface
-│   │   │   ├── DocumentList.tsx    # Document browser
-│   │   │   └── DocumentDetails.tsx # Document analysis modal
-│   │   ├── services/
-│   │   │   └── api.ts             # Backend API client
-│   │   └── styles/                # CSS styling
-│   └── package.json               # Node.js dependencies
-├── 📚 data/
-│   └── *.blawx                    # Legal documents (Wills Act, Access to Info Act)
-└── 🔧 tools/                     # Utilities
-    └── manage_documents.py        # Document management scripts
-```
-
----
-
-## 💡 **Key Features Deep Dive**
-
-### **🔍 Document Analysis**
+### **Document Analysis**
 - **Provision Breakdown**: View all legal provisions with metadata
 - **Rule Statistics**: Count facts, rules, predicates, variables
 - **Sample Rules Display**: See actual s(CASP) logic with syntax highlighting
 - **Interactive Tabs**: Navigate between Overview, Provisions, and Rules Analysis
 
-### **💬 Intelligent Chat Interface**
+### **Intelligent Chat Interface**
 - **Streaming Responses**: Real-time answer generation
 - **Confidence Scores**: Transparent uncertainty (e.g., "90% confident")
 - **Source Citations**: Direct links to legal provisions
 - **Natural Language**: Complex legal concepts explained simply
 
-### **⚖️ Formal Verification Engine**
+### **Formal Verification Engine**
 - **Mathematical Proofs**: Every answer backed by formal logic
-- **Rule Database**: 958+ legal rules from real legislation
 - **Query Processing**: Natural language → Logic → Verified Answer
 - **Explanation Generation**: Shows reasoning steps
 
-### **📊 System Status Monitoring**
+### **System Status Monitoring**
 - **Health Checks**: Real-time service status
 - **Document Stats**: Loaded documents and rule counts
 - **Performance Metrics**: Query processing times
 
 ---
 
-## 🎮 **Usage Examples**
+## **Usage Examples**
 
 ### **Example 1: Access to Information Query**
 ```
@@ -328,9 +264,6 @@ System Response:
 s(CASP) Verification: ✓ All requirements formally verified
 ```
 
----
-
-## 🛠️ **Development & Customization**
 
 ### **Adding New Legal Documents**
 
@@ -352,73 +285,13 @@ s(CASP) Verification: ✓ All requirements formally verified
 - `GET /documents/{slug}/details` - Detailed document analysis
 - `POST /query` - Process legal queries with formal verification
 
----
 
-## 🔧 **Troubleshooting**
-
-### **Common Issues**
-
-**"Rules Analysis is empty"**
-- ✅ **Fixed in v1.0** - Updated rule type mapping
-
-**Backend won't start**
-```bash
-# Check Python environment
-python --version  # Should be 3.9+
-
-# Install dependencies
-pip install uvicorn fastapi
-
-# Check port availability  
-lsof -i :8000
-```
-
-**Frontend build errors**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Check Node version
-node --version  # Should be 16+
-```
-
-**s(CASP) engine issues**
-```bash
-# Verify SWI-Prolog installation
-swipl --version
-
-# Check binary permissions
-chmod +x backend/bin/scasp
-```
-
-### **Performance Optimization**
-
-- **Rule Database**: Currently handles 958+ rules efficiently
-- **Caching**: Document parsing cached between queries
-- **Streaming**: Real-time response generation
-- **Concurrent Queries**: Backend handles multiple users
-
----
-
-## 🤝 **Contributing**
-
-1. **Fork** the repository
-2. **Create feature branch**: `git checkout -b feature/amazing-feature`
-3. **Add tests** for new functionality
-4. **Commit changes**: `git commit -m 'Add amazing feature'`
-5. **Push to branch**: `git push origin feature/amazing-feature`
-6. **Open Pull Request**
-
----
-
-## 📜 **License**
+## **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
 
-## 🙏 **Acknowledgments**
+## **Acknowledgments**
 
 - **s(CASP) Team** - Formal logic programming framework
 - **SWI-Prolog** - Logic programming engine
@@ -427,13 +300,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 **Support**
-
-- 🐛 **Bug Reports**: [Open an issue](../../issues)
-- 💡 **Feature Requests**: [Discussion board](../../discussions)  
-- 📧 **Contact**: [your-email@domain.com]
-- 📚 **Documentation**: See `/docs` folder for detailed guides
-
----
-
-**🏛️ Built with precision for legal professionals who demand accuracy over approximation.**
+**Built with precision for legal professionals who demand accuracy over approximation.**
