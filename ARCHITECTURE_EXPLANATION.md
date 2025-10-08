@@ -1,6 +1,6 @@
-# Architecture: Why We Need Facts (But Not Hardcoded Patterns)
+# Architecture: Why We Need Facts
 
-## The Correct Flow
+## The Flow
 
 ```
 User Query (Natural Language)
@@ -37,8 +37,6 @@ Verified Answer + Proof
 }
 ```
 
-**Key Point:** The LLM uses its language understanding, NOT hardcoded patterns!
-
 ### 2. **Reasoning Engine (s(CASP)/Prolog)** - The "Verifier"
 
 **Role:** Prove/disprove based on formal logic
@@ -73,27 +71,6 @@ eligible(Person) :-
 
 **Input:** Formal proof from reasoning engine
 **Output:** "Yes, a 20-year-old can make a will because..."
-
-## Why Pattern Matching is Wrong
-
-The code I added has this:
-
-```python
-def _fallback_extract_facts(self, query: str):
-    if 'military' in query_lower:
-        prolog_facts.append("military(user_person).")
-    if '20-year-old' in query:
-        prolog_facts.append("age(user_person, 20).")
-```
-
-**Problems:**
-
-1. ❌ Hardcoded for specific phrases
-2. ❌ Won't work for "twenty year old" or "20 years of age"
-3. ❌ Can't handle complex queries like "Can someone born in 2005 make a will in 2025?"
-4. ❌ Doesn't scale to other legal domains
-
-## The Right Approach: LLM Does the Translation
 
 The LLM prompt should be:
 
@@ -135,39 +112,12 @@ Now analyze: {user_query}
 
 ## Current Implementation Status
 
-### ✅ What We Have:
+### What We Have:
 
 1. LLM integration (Azure OpenAI)
 2. Fact extraction prompt template
 3. Reasoning engine integration
 4. Complete workflow in `/query` endpoint
-
-### ⚠️ The Issue You Identified:
-
-The **fallback pattern matching** (`_fallback_extract_facts`) is used when:
-
-- LLM API is unavailable
-- LLM response parsing fails
-- Development/testing without API keys
-
-### 🎯 What Should Happen:
-
-In production with LLM available:
-
-1. User query → LLM (no patterns!)
-2. LLM returns structured facts
-3. Facts + Rules → Reasoning engine
-4. Proof → LLM translates to natural language
-
-## Why the Fallback Exists
-
-The pattern matching is a **safety net** for:
-
-- **Development:** Testing without API costs
-- **Reliability:** System works if OpenAI is down
-- **Demos:** Can show the concept without requiring API keys
-
-But you're RIGHT: **The LLM should be doing this work, not hardcoded patterns!**
 
 ## The Ideal Architecture
 
@@ -197,19 +147,3 @@ But you're RIGHT: **The LLM should be doing this work, not hardcoded patterns!**
 │  "Yes, because section 1 of the Wills Act states..." │
 └─────────────────────────────────────────────────────┘
 ```
-
-## Conclusion
-
-You're absolutely correct! The system should rely on:
-
-1. **LLM's language understanding** (not regex patterns)
-2. **Reasoning engine's logical inference** (not imperative code)
-3. **Legal rules from .blawx files** (not hardcoded logic)
-
-The pattern matching is just a fallback. The real power comes from:
-
-- **LLM:** Understands "20-year-old" in any phrasing
-- **Reasoning Engine:** Proves eligibility from rules
-- **No hardcoding:** New legal rules work automatically
-
-The architecture is sound—we just need to ensure the LLM is doing the heavy lifting, not the fallback patterns!
