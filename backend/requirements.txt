@@ -15,5 +15,5 @@ typing-extensions==4.8.0
 # swiplserver==0.1.12
 
 # For testing
-pytest==7.4.3
+pytest==8.4.2
 pytest-asyncio==0.21.1
